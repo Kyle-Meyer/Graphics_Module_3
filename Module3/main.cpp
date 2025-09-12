@@ -22,6 +22,7 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <geometry/matrix.hpp>
 
 namespace cg
 {
@@ -72,7 +73,59 @@ void sleep(int32_t milliseconds)
  */
 void reshape(int32_t width, int32_t height)
 {
-    // TODO - first!
+  glViewport(0,0, width, height);
+  
+  float aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
+
+  float world_width, world_height;
+
+  //determine world window dimensions
+  //if width is smaller then it will be the 10 unit parameter
+  //height gets scaled by aspect ratio
+  if(width <=  height)
+  {
+    world_width = 10.0f;
+    world_height = 10.0f / aspect_ratio;
+  }
+  else 
+  {
+    world_height = 10.0f;
+    world_width = 10.0f / aspect_ratio;   
+  }
+
+  //bounds of the orthographic projection
+  float left = -world_width / 2.0f;
+  float right = world_width / 2.0f;
+  float bottom = world_height / 2.0f;
+  float top = world_height / 2.0f; 
+  float near_plane = -1.0f;
+  float far_plane = 1.0f;
+
+  // Calculate orthographic matrix components
+  float width_range = right - left;
+  float height_range = top - bottom;
+  float depth_range = far_plane - near_plane;
+  
+  //fill the array with default values (column major order)
+  std::fill(g_scene_state.ortho.begin(), g_scene_state.ortho.end(), 0.0f);
+
+  //major diagonal of 1 
+  g_scene_state.ortho[0] = 1.0f; //[0,0]
+  g_scene_state.ortho[5] = 1.0f; //[1,1]
+  g_scene_state.ortho[10] = 1.0f;//[2,2]
+  g_scene_state.ortho[15] = 1.0f;//[3,3]
+
+  //set the orthographic projection values 
+  g_scene_state.ortho[0] = 2.0f / width_range;        // m[0][0] - X scaling
+  g_scene_state.ortho[5] = 2.0f / height_range;       // m[1][1] - Y scaling  
+  g_scene_state.ortho[10] = -2.0f / depth_range;      // m[2][2] - Z scaling
+  g_scene_state.ortho[12] = -(right + left) / width_range;   // m[0][3] - X translation
+  g_scene_state.ortho[13] = -(top + bottom) / height_range;  // m[1][3] - Y translation
+  g_scene_state.ortho[14] = -(far_plane + near_plane) / depth_range; // m[2][3] - Z translation
+  
+  std::cout << "Reshape: " << width << "x" << height 
+            << " -> World: " << world_width << "x" << world_height << std::endl;
+
 }
 
 /**
