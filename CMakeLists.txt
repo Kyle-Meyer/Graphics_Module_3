@@ -254,3 +254,9 @@ else()
         )
     endforeach( target_i )
 endif()
+
+file(COPY 
+    ${CMAKE_SOURCE_DIR}/Module3/basic_vert.glsl
+    ${CMAKE_SOURCE_DIR}/Module3/basic_frag.glsl
+    DESTINATION ${CMAKE_BINARY_DIR}/Module3/
+)

@@ -25,7 +25,8 @@ SceneNode::~SceneNode() { destroy(); }
 void SceneNode::draw(SceneState &scene_state)
 {
     // Loop through the list and draw the children
-    for(auto c : children_) { c->draw(scene_state); }
+    for(auto c : children_) { 
+    c->draw(scene_state); }
 }
 
 void SceneNode::update(SceneState &scene_state)

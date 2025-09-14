@@ -86,6 +86,10 @@ void PresentationNode::draw(SceneState& scene_state)
         glUniform4f(scene_state.color_loc, color_.r, color_.g, color_.b, color_.a);
         cg::check_error("PresentationNode::draw - setting color uniform");
     }
+    else 
+    {
+      std::cout << "Warning: color_loc is -1, uniform not found!" << std::endl;
+    }
     
     // Draw all children with the current presentation state
     SceneNode::draw(scene_state);

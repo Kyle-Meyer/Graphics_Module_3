@@ -14,15 +14,21 @@
 #include "SDL3/SDL_video.h"
 #include "filesystem_support/file_locator.hpp"
 #include "geometry/geometry.hpp"
+#include "geometry/point2.hpp"
+#include "scene/color4.hpp"
 #include "scene/graphics.hpp"
+#include "scene/presentation_node.hpp"
 #include "scene/scene.hpp"
 
 #include <GL/gl.h>
 #include <chrono>
 #include <iostream>
+#include <memory>
 #include <thread>
 #include <vector>
 #include <geometry/matrix.hpp>
+#include "basic_shader_node.hpp"
+#include "ngon_geometry_node.hpp"
 
 namespace cg
 {
@@ -73,58 +79,69 @@ void sleep(int32_t milliseconds)
  */
 void reshape(int32_t width, int32_t height)
 {
-  glViewport(0,0, width, height);
-  
-  float aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
 
-  float world_width, world_height;
+    std::cout << "=== RESHAPE CALLED ===" << std::endl;
+    glViewport(0, 0, width, height);
+    cg::check_error("glViewport");
+    
+    float aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
+    std::cout << "Window: " << width << "x" << height << ", aspect ratio: " << aspect_ratio << std::endl;
 
-  //determine world window dimensions
-  //if width is smaller then it will be the 10 unit parameter
-  //height gets scaled by aspect ratio
-  if(width <=  height)
-  {
-    world_width = 10.0f;
-    world_height = 10.0f / aspect_ratio;
-  }
-  else 
-  {
-    world_height = 10.0f;
-    world_width = 10.0f / aspect_ratio;   
-  }
+    float world_width, world_height;
 
-  //bounds of the orthographic projection
-  float left = -world_width / 2.0f;
-  float right = world_width / 2.0f;
-  float bottom = world_height / 2.0f;
-  float top = world_height / 2.0f; 
-  float near_plane = -1.0f;
-  float far_plane = 1.0f;
+    // Determine world window dimensions
+    if(width <= height)
+    {
+        world_width = 10.0f;
+        world_height = 10.0f / aspect_ratio;
+    }
+    else 
+    {
+        world_height = 10.0f;
+        world_width = 10.0f * aspect_ratio;   
+    }
 
-  // Calculate orthographic matrix components
-  float width_range = right - left;
-  float height_range = top - bottom;
-  float depth_range = far_plane - near_plane;
-  
-  //fill the array with default values (column major order)
-  std::fill(g_scene_state.ortho.begin(), g_scene_state.ortho.end(), 0.0f);
+    // Bounds of the orthographic projection
+    float left = -world_width / 2.0f;
+    float right = world_width / 2.0f;
+    float bottom = -world_height / 2.0f;
+    float top = world_height / 2.0f; 
+    float near_plane = -1.0f;
+    float far_plane = 1.0f;
 
-  //major diagonal of 1 
-  g_scene_state.ortho[0] = 1.0f; //[0,0]
-  g_scene_state.ortho[5] = 1.0f; //[1,1]
-  g_scene_state.ortho[10] = 1.0f;//[2,2]
-  g_scene_state.ortho[15] = 1.0f;//[3,3]
+    std::cout << "World dimensions: " << world_width << "x" << world_height << std::endl;
+    std::cout << "Projection bounds: left=" << left << ", right=" << right 
+              << ", bottom=" << bottom << ", top=" << top << std::endl;
 
-  //set the orthographic projection values 
-  g_scene_state.ortho[0] = 2.0f / width_range;        // m[0][0] - X scaling
-  g_scene_state.ortho[5] = 2.0f / height_range;       // m[1][1] - Y scaling  
-  g_scene_state.ortho[10] = -2.0f / depth_range;      // m[2][2] - Z scaling
-  g_scene_state.ortho[12] = -(right + left) / width_range;   // m[0][3] - X translation
-  g_scene_state.ortho[13] = -(top + bottom) / height_range;  // m[1][3] - Y translation
-  g_scene_state.ortho[14] = -(far_plane + near_plane) / depth_range; // m[2][3] - Z translation
-  
-  std::cout << "Reshape: " << width << "x" << height 
-            << " -> World: " << world_width << "x" << world_height << std::endl;
+    // Calculate orthographic matrix components
+    float width_range = right - left;
+    float height_range = top - bottom;
+    float depth_range = far_plane - near_plane;
+    
+    std::cout << "Ranges: width=" << width_range << ", height=" << height_range 
+              << ", depth=" << depth_range << std::endl;
+
+    // Fill the array with zeros first
+    std::fill(g_scene_state.ortho.begin(), g_scene_state.ortho.end(), 0.0f);
+
+    // Set the orthographic projection values (column-major order for OpenGL)
+    g_scene_state.ortho[0] = 2.0f / width_range;                              // m[0][0] - X scaling
+    g_scene_state.ortho[5] = 2.0f / height_range;                             // m[1][1] - Y scaling  
+    g_scene_state.ortho[10] = -2.0f / depth_range;                            // m[2][2] - Z scaling
+    g_scene_state.ortho[12] = -(right + left) / width_range;                  // m[0][3] - X translation
+    g_scene_state.ortho[13] = -(top + bottom) / height_range;                 // m[1][3] - Y translation
+    g_scene_state.ortho[14] = -(far_plane + near_plane) / depth_range;        // m[2][3] - Z translation
+    g_scene_state.ortho[15] = 1.0f;                                           // m[3][3] - W component
+
+    std::cout << "Matrix components:" << std::endl;
+    std::cout << "  Scale X: " << g_scene_state.ortho[0] << std::endl;
+    std::cout << "  Scale Y: " << g_scene_state.ortho[5] << std::endl;
+    std::cout << "  Scale Z: " << g_scene_state.ortho[10] << std::endl;
+    std::cout << "  Trans X: " << g_scene_state.ortho[12] << std::endl;
+    std::cout << "  Trans Y: " << g_scene_state.ortho[13] << std::endl;
+    std::cout << "  Trans Z: " << g_scene_state.ortho[14] << std::endl;
+    
+    std::cout << "=== RESHAPE COMPLETE ===" << std::endl;
 
 }
 
@@ -133,11 +150,25 @@ void reshape(int32_t width, int32_t height)
  */
 void display(void)
 {
+    static int frame_count = 0;
+    if (frame_count < 5) {  // Only print first 5 frames to avoid spam
+        std::cout << "Display frame " << frame_count << std::endl;
+    }
+    frame_count++;
+
     // Clear the framebuffer
     glClear(GL_COLOR_BUFFER_BIT);
     
+    if (frame_count < 5) {
+        std::cout << "About to draw scene root" << std::endl;
+    }
+    
     g_scene_root->draw(g_scene_state);
     cg::check_error("After Draw");
+    
+    if (frame_count < 5) {
+        std::cout << "Finished drawing, swapping buffers" << std::endl;
+    }
     
     // Swap buffers
     SDL_GL_SwapWindow(g_sdl_window);
@@ -149,7 +180,15 @@ void display(void)
 bool handle_window_event(const SDL_Event &event)
 {
     bool cont_program = true;
-    // STUDENT TODO
+    
+    if (event.type == SDL_EVENT_WINDOW_RESIZED || 
+        event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) 
+    {
+        int width, height;
+        SDL_GetWindowSize(g_sdl_window, &width, &height);
+        reshape(width, height);
+        std::cout << "Window resized, calling reshape(" << width << ", " << height << ")" << std::endl;
+    }
 
     return cont_program;
 }
@@ -233,18 +272,89 @@ bool handle_events()
  */
 void create_scene()
 {
-    std::cout << "Creating scene graph..." << std::endl;
+  std::cout << "Creating scene graph..." << std::endl;
+  
+  // Create the root scene node
+  g_scene_root = std::make_shared<cg::SceneNode>();
+  g_scene_root->set_name("Root");
     
-    // Create the root scene node
-    g_scene_root = std::make_shared<cg::SceneNode>();
-    g_scene_root->set_name("Root");
-    
-    std::cout << "Scene graph created with root node" << std::endl;
-    
-    // Optional: Print the scene graph to verify
-    g_scene_root->print_graph(std::cout, 0);
-    
-    cg::check_error("create_scene");
+  std::shared_ptr<cg::BasicShaderNode> shader_node = std::make_shared<cg::BasicShaderNode>();
+  shader_node->set_name("BasicShader");
+  if(!shader_node->create())
+  {
+    std::cerr << "Failed to make shader node" << std::endl;
+    return;
+  }
+
+  g_scene_root->add_child(shader_node);
+
+  //======= RED CIRCLE CODE ==========
+  std::shared_ptr<cg::PresentationNode> red_presentation_node = std::make_shared<cg::PresentationNode>(cg::Color4(0.75f, 0.0f, 0.0f, 1.0f));
+  red_presentation_node->set_name("RedPresentation");
+  red_presentation_node->set_blending_enabled(false); // no blending  
+
+  //create the circle geometry 
+  std::shared_ptr<cg::NGonGeometryNode> circle_geometry = std::make_shared<cg::NGonGeometryNode>(cg::Point2(0.0f, 0.0f), 32, 0.4f);
+  circle_geometry->set_name("CircleGeometry");
+
+  if(!circle_geometry->create())
+  {
+    std::cerr << "Failed to create circle geometry" << std::endl;
+    return;
+  } 
+
+  //build hierarchy: shader -> red presentation -> circle geometry
+  red_presentation_node->add_child(circle_geometry);
+  shader_node->add_child(red_presentation_node);
+
+  //======= BLUE HEXAGON CODE ==========
+  std::shared_ptr<cg::PresentationNode> blue_presentation = std::make_shared<cg::PresentationNode>(cg::Color4(0.0f, 0.0f, 0.75f, 0.25f));
+  blue_presentation->set_name("BluePresentation");
+  blue_presentation->set_blending_enabled(true);
+  blue_presentation->set_blend_function(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  //create the hexagon geometry 
+  std::shared_ptr<cg::NGonGeometryNode> hexagon_geometry = std::make_shared<cg::NGonGeometryNode>(cg::Point2(-2.0f, -2.0f), 6, 0.8f);
+  hexagon_geometry->set_name("HexagonGeometry");
+
+  if(!hexagon_geometry->create())
+  {
+    std::cerr << "Failed to create hexagon geometry" << std::endl;
+    return;
+  }
+
+  blue_presentation->add_child(hexagon_geometry);
+  shader_node->add_child(blue_presentation);
+
+  //======= GREEN OCTAGON CODE ==========
+  std::shared_ptr<cg::PresentationNode> green_presentation = std::make_shared<cg::PresentationNode>(cg::Color4(0.0f, 0.75f, 0.0f, 0.5f));
+  green_presentation->set_name("GreenPresentation");
+  green_presentation->set_blending_enabled(true);
+  green_presentation->set_blend_function(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  std::shared_ptr<cg::NGonGeometryNode> octagon_geometry = std::make_shared<cg::NGonGeometryNode>(cg::Point2(2.5f, 2.5f), 8, 0.6f);
+  octagon_geometry->set_name("OctagonGeometry");
+
+  if(!octagon_geometry->create())
+  {
+    std::cerr << "Failed to create octagon geometry" << std::endl;
+    return;
+  }
+
+  green_presentation->add_child(octagon_geometry);
+  shader_node->add_child(green_presentation);
+
+  std::cout << "Scene graph created successfully!" << std::endl;
+  std::cout << "Objects created:" << std::endl;
+  std::cout << "  - Red circle (32-gon) at (0,0), radius 4.5, opaque" << std::endl;
+  std::cout << "  - Blue hexagon at (-2,-2), radius 3, 25% opaque" << std::endl;
+  std::cout << "  - Green octagon at (2.5,2.5), radius 2, 50% transparent" << std::endl;
+ 
+  // Print the complete scene graph structure
+  std::cout << "\nScene graph structure:" << std::endl;
+  g_scene_root->print_graph(std::cout, 0);
+  
+  cg::check_error("create_scene");
 }
 
 bool init_sdl()
@@ -315,8 +425,6 @@ bool init_openGL()
   //black
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   
-  glEnable(GL_DEPTH_TEST);
-
   glEnable(GL_MULTISAMPLE);
 
   // Display OpenGL information
@@ -400,7 +508,12 @@ int main(int argc, char **argv)
     // execute BEFORE vertex shaders will populate 'gl_PointCoord'
     glEnable(GL_POINT_SPRITE);
 #endif
-    
+   
+    // Set initial viewport and projection matrix
+    int initial_width, initial_height;
+    SDL_GetWindowSize(g_sdl_window, &initial_width, &initial_height);
+    reshape(initial_width, initial_height);
+    std::cout << "Initial reshape called with: " << initial_width << "x" << initial_height << std::endl;
     // Create the scene
     create_scene();
     cg::check_error("create_scene");

@@ -29,61 +29,123 @@ NGonGeometryNode::~NGonGeometryNode()
 
 bool NGonGeometryNode::create()
 {
-  //generate vertex and index data 
+  // Generate vertex and index data 
   std::vector<float> vertices;
   std::vector<unsigned int> indices;
   generate_vertices(vertices, indices);
 
-  vertex_count_ = static_cast<int>(vertices.size()) / 2; //2 components per vertex
+  vertex_count_ = static_cast<int>(vertices.size()) / 2; // 2 components per vertex
   index_count_ = static_cast<int>(indices.size());
   
-  //generate opengl objects
+  std::cout << "NGon has " << vertex_count_ << " vertices and " << index_count_ << " indices" << std::endl;
+  
+  // Print first few vertices for debugging
+  std::cout << "First few vertices: ";
+  for (size_t i = 0; i < std::min((size_t)10, vertices.size()); i++) {
+      std::cout << vertices[i] << " ";
+  }
+  std::cout << std::endl;
+  
+  // Generate OpenGL objects
+  std::cout << "About to generate VAO..." << std::endl;
   glGenVertexArrays(1, &vao_);
+  cg::check_error("glGenVertexArrays");
+
+  std::cout << "Generated VAO: " << vao_ << std::endl;
+  if (vao_ == 0) {
+      std::cout << "ERROR: VAO generation failed!" << std::endl;
+      return false;
+  }
+
   glGenBuffers(1, &vertex_buffer_);
   glGenBuffers(1, &index_buffer_);
 
+  // Bind VAO first
   glBindVertexArray(vao_);
+  cg::check_error("glBindVertexArray");
 
-  //upload vertex data
+  // Upload vertex data
   glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_);
+  cg::check_error("glBindBuffer vertex");
+  
   glBufferData(GL_ARRAY_BUFFER, 
                vertices.size() * sizeof(float), 
                vertices.data(), 
                GL_STATIC_DRAW);
+  cg::check_error("glBufferData vertex");
 
-  //upload index data 
-  glBindBuffer(GL_ARRAY_BUFFER, index_buffer_);
-  glBufferData(GL_ARRAY_BUFFER,
+  // Upload index data 
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_);
+  cg::check_error("glBindBuffer index");
+  
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
                indices.size() * sizeof(unsigned int),
                indices.data(),
                GL_STATIC_DRAW);
+  cg::check_error("glBufferData index");
 
-  //setup vertex attributes (assuming position is at location 0)
-  glVertexAttribPointer(0,2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+  // Setup vertex attributes (position at location 0)
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+  cg::check_error("glVertexAttribPointer");
+  
   glEnableVertexAttribArray(0);
+  cg::check_error("glEnableVertexAttribArray");
 
-  //unbind vao 
+  // Unbind VAO (good practice)
   glBindVertexArray(0);
+  
+  // Verify the setup worked
+  GLint max_vertex_attribs;
+  glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &max_vertex_attribs);
+  std::cout << "Max vertex attributes: " << max_vertex_attribs << std::endl;
 
-  cg::check_error("NGonGeometryNode::create");
+  cg::check_error("NGonGeometryNode::create - end");
+  
+  std::cout << "NGonGeometryNode::create completed successfully" << std::endl;
   return true;
 }
 
 void NGonGeometryNode::draw(SceneState& scene_state)
 {
-  if(vao_ == 0)
-  {
-    std::cout << "warning:: ngon not init, call create first" << std::endl;
-    return;
-  }
+    if(vao_ == 0)
+    {
+        std::cout << "Warning: NGon not initialized, call create() first" << std::endl;
+        return;
+    }
 
-  glBindVertexArray(vao_);
-  glDrawElements(GL_TRIANGLES, index_count_, GL_UNSIGNED_INT, 0);
-  glBindVertexArray(0);
+    
+    // Verify the current shader program
+    GLint current_program;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &current_program);
+    
+    // Check if vertex attribute 0 is enabled
+    GLint vertex_attrib_enabled;
+    glGetVertexAttribiv(0, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &vertex_attrib_enabled);
+    
+    // Bind VAO and draw
+    glBindVertexArray(vao_);
+    cg::check_error("NGonGeometryNode::draw - bind VAO");
+    
+    // Verify VAO is bound
+    GLint bound_vao;
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &bound_vao);
+    
+    // Check if depth testing might be interfering
+    GLboolean depth_test_enabled = glIsEnabled(GL_DEPTH_TEST);
+    
+    // Draw the elements
+    glDrawElements(GL_TRIANGLES, index_count_, GL_UNSIGNED_INT, 0);
+    cg::check_error("NGonGeometryNode::draw - glDrawElements");
+    
+    // Re-enable depth test if it was enabled
+    if (depth_test_enabled) {
+        glEnable(GL_DEPTH_TEST);
+    }
+    
+    glBindVertexArray(0);
+    cg::check_error("NGonGeometryNode::draw - unbind VAO");
 
-  cg::check_error("NGonGeometryNode::draw");
-
-  SceneNode::draw(scene_state);
+    SceneNode::draw(scene_state);
 }
 
 void NGonGeometryNode::destroy()
@@ -112,8 +174,11 @@ void NGonGeometryNode::destroy()
 
 void NGonGeometryNode::generate_vertices(std::vector<float>& vertices, std::vector<unsigned int>& indices)
 {
-    vertices.clear();
+  vertices.clear();
     indices.clear();
+    
+    std::cout << "Generating " << num_sides_ << "-gon at (" << center_.x << ", " << center_.y 
+              << ") with radius " << radius_ << std::endl;
     
     // Reserve space for efficiency
     vertices.reserve((num_sides_ + 1) * 2); // +1 for center vertex, *2 for x,y coordinates
@@ -122,8 +187,10 @@ void NGonGeometryNode::generate_vertices(std::vector<float>& vertices, std::vect
     // Add center vertex first
     vertices.push_back(center_.x);
     vertices.push_back(center_.y);
+    std::cout << "Center vertex: (" << center_.x << ", " << center_.y << ")" << std::endl;
     
     // Generate vertices around the circle
+    std::cout << "Perimeter vertices:" << std::endl;
     for (int i = 0; i < num_sides_; ++i) {
         // Calculate angle for this vertex (counter-clockwise from positive X-axis)
         float angle = (2.0f * PI * i) / static_cast<float>(num_sides_);
@@ -134,15 +201,30 @@ void NGonGeometryNode::generate_vertices(std::vector<float>& vertices, std::vect
         
         vertices.push_back(x);
         vertices.push_back(y);
+        
+        if (i < 8) { // Only print first 8 to avoid spam
+            std::cout << "  Vertex " << i << ": (" << x << ", " << y << ") at angle " << angle << " radians" << std::endl;
+        }
     }
     
     // Generate triangle indices using triangle fan approach
-    // Each triangle connects center (index 0) with two consecutive perimeter vertices
-    for (int i = 0; i < num_sides_; ++i) {
-        indices.push_back(0);                           // Center vertex
-        indices.push_back(i + 1);                       // Current perimeter vertex
-        indices.push_back((i + 1) % num_sides_ + 1);    // Next perimeter vertex (wrap around)
+    std::cout << "Triangle indices:" << std::endl;
+    for (int i = 0; i < num_sides_; ++i) 
+  {
+        unsigned int center_idx = 0;
+        unsigned int current_idx = i + 1;
+        unsigned int next_idx = (i + 1) % num_sides_ + 1;
+        
+        indices.push_back(center_idx);      // Center vertex
+        indices.push_back(current_idx);     // Current perimeter vertex
+        indices.push_back(next_idx);        // Next perimeter vertex (wrap around)
+        
+        if (i < 4) { // Only print first 4 triangles to avoid spam
+            std::cout << "  Triangle " << i << ": [" << center_idx << ", " << current_idx << ", " << next_idx << "]" << std::endl;
+        }
     }
+    
+    std::cout << "Generated " << vertices.size()/2 << " vertices and " << indices.size()/3 << " triangles" << std::endl;
 }
 
 }
