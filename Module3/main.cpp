@@ -11,6 +11,7 @@
 //============================================================================
 
 #include "SDL3/SDL_error.h"
+#include "SDL3/SDL_events.h"
 #include "SDL3/SDL_video.h"
 #include "filesystem_support/file_locator.hpp"
 #include "geometry/geometry.hpp"
@@ -29,6 +30,8 @@
 #include <geometry/matrix.hpp>
 #include "basic_shader_node.hpp"
 #include "ngon_geometry_node.hpp"
+#include "line_shader_node.hpp"
+#include "draggable_line_geometry_node.hpp"
 
 namespace cg
 {
@@ -57,11 +60,24 @@ constexpr int32_t DRAWS_PER_SECOND = 30;
 constexpr int32_t DRAW_INTERVAL_MILLIS =
     static_cast<int32_t>(1000.0 / static_cast<double>(DRAWS_PER_SECOND));
 
+cg::Matrix4x4 g_inverse_projection;  // Inverse transformation matrix
+int32_t g_window_width = 800;        // Current window dimensions
+int32_t g_window_height = 800;
+
 // Root of the scene graph
 std::shared_ptr<cg::SceneNode> g_scene_root;
 
 // Scene state
 cg::SceneState g_scene_state;
+
+// Line shader node for draggable lines
+std::shared_ptr<cg::LineShaderNode> g_line_shader_node;
+
+// Current draggable line (active during mouse drag)
+std::shared_ptr<cg::DraggableLineGeometryNode> g_current_line;
+
+// Mouse state tracking
+bool g_mouse_dragging = false;
 
 // Sleep function to help run a reasonable timer
 void sleep(int32_t milliseconds)
@@ -132,7 +148,23 @@ void reshape(int32_t width, int32_t height)
     g_scene_state.ortho[13] = -(top + bottom) / height_range;                 // m[1][3] - Y translation
     g_scene_state.ortho[14] = -(far_plane + near_plane) / depth_range;        // m[2][3] - Z translation
     g_scene_state.ortho[15] = 1.0f;                                           // m[3][3] - W component
+  
+    //initialize to identity
+    g_inverse_projection.set_identity();
 
+    //inverse scaling 
+    g_inverse_projection.m00() = width_range / 2.0f;
+    g_inverse_projection.m11() = height_range / 2.0f;
+    g_inverse_projection.m22() = -depth_range / 2.0f;
+    g_inverse_projection.m33() = 1.0f; 
+    
+    //inverse translation 
+    g_inverse_projection.m03() = (right + left) / 2.0f;
+    g_inverse_projection.m13() = (top + bottom) / 2.0f;
+    g_inverse_projection.m23() = -(far_plane + near_plane) / 2.0f;
+
+    g_window_width = width;
+    g_window_height = height;
     std::cout << "Matrix components:" << std::endl;
     std::cout << "  Scale X: " << g_scene_state.ortho[0] << std::endl;
     std::cout << "  Scale Y: " << g_scene_state.ortho[5] << std::endl;
@@ -141,8 +173,39 @@ void reshape(int32_t width, int32_t height)
     std::cout << "  Trans Y: " << g_scene_state.ortho[13] << std::endl;
     std::cout << "  Trans Z: " << g_scene_state.ortho[14] << std::endl;
     
+
+    std::cout << "Inverse matrix components:" << std::endl;
+    std::cout << "  Inv Scale X: " << g_inverse_projection.m00() << std::endl;
+    std::cout << "  Inv Scale Y: " << g_inverse_projection.m11() << std::endl;
+    std::cout << "  Inv Trans X: " << g_inverse_projection.m03() << std::endl;
+    std::cout << "  Inv Trans Y: " << g_inverse_projection.m13() << std::endl;
     std::cout << "=== RESHAPE COMPLETE ===" << std::endl;
 
+}
+
+cg::Point2 screen_to_world(float screen_x, float screen_y)
+{
+    // Convert screen coordinates to normalized device coordinates (NDC)
+    // Screen coordinates: (0,0) at top-left, (width,height) at bottom-right
+    // NDC: (-1,-1) at bottom-left, (1,1) at top-right
+    
+    float ndc_x = (2.0f * screen_x) / static_cast<float>(g_window_width) - 1.0f;
+    float ndc_y = 1.0f - (2.0f * screen_y) / static_cast<float>(g_window_height); // Flip Y
+    
+    // Convert NDC to world coordinates using the implemented HPoint3 operator
+    cg::Point3 ndc_point(ndc_x, ndc_y, 0.0f); // Z=0 for 2D, W=1 for point
+    
+    // Use the newly implemented Matrix4x4::operator*(const HPoint3&)
+    cg::HPoint3 world_hpoint = g_inverse_projection * ndc_point;
+    
+    // Convert back to Cartesian coordinates
+    cg::Point3 world_point = world_hpoint.to_cartesian();
+    
+    std::cout << "Screen (" << screen_x << ", " << screen_y << ") -> "
+              << "NDC (" << ndc_x << ", " << ndc_y << ") -> "
+              << "World (" << world_point.x << ", " << world_point.y << ")" << std::endl;
+    
+    return cg::Point2(world_point.x, world_point.y);
 }
 
 /**
@@ -221,10 +284,52 @@ bool handle_key_event(const SDL_Event &event)
  */
 void handle_mouse_event(const SDL_Event &event)
 {
-    float x_pos = static_cast<float>(event.button.x);
-    float y_pos = static_cast<float>(event.button.y);
+  float x_pos = static_cast<float>(event.button.x);
+  float y_pos = static_cast<float>(event.button.y);
 
-    // STUDENT TODO
+  cg::Point2 world_pos = screen_to_world(x_pos, y_pos);
+  
+  std::cout << "Mouse click at screen (" << x_pos << ", " << y_pos << ") "
+              << "= world (" << world_pos.x << ", " << world_pos.y << ")" << std::endl;
+  
+  if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTTON_LEFT)
+  {
+    if (!g_line_shader_node) 
+    {
+      std::cout << "Line shader not available" << std::endl;
+      return;
+    }
+        
+    std::cout << "Starting draggable line at: (" << world_pos.x << ", " << world_pos.y << ")" << std::endl;
+    
+    g_current_line = std::make_shared<cg::DraggableLineGeometryNode>(world_pos);
+    g_current_line->set_name("DraggableLine");
+    
+    if (g_current_line->create()) 
+    {
+      g_line_shader_node->add_child(g_current_line);
+      g_mouse_dragging = true;
+      std::cout << "Draggable line created" << std::endl;
+    } 
+    else 
+    {
+      g_current_line.reset();
+    }
+  }
+
+  else if (event.type == SDL_EVENT_MOUSE_BUTTON_UP && event.button.button == SDL_BUTTON_LEFT)
+  {
+    if (g_mouse_dragging && g_current_line) 
+    {
+      std::cout << "Finished dragging line - line stays on screen" << std::endl;
+      
+      // Just stop dragging - don't remove the line from the scene
+      g_current_line.reset(); // Clear the current line pointer
+      g_mouse_dragging = false;
+      
+      // The line stays as a child of g_line_shader_node and will continue to render
+    }
+  }
 }
 
 /**
@@ -232,7 +337,14 @@ void handle_mouse_event(const SDL_Event &event)
  */
 void handle_mouse_motion_event(const SDL_Event &event)
 {
-    // STUDENT TODO
+  if (g_mouse_dragging && g_current_line && g_line_shader_node) 
+  {
+      float x_pos = static_cast<float>(event.motion.x);
+      float y_pos = static_cast<float>(event.motion.y);
+      
+      cg::Point2 world_pos = screen_to_world(x_pos, y_pos);
+      g_current_line->update_end_point(world_pos);
+  }
 }
 
 /**
@@ -294,7 +406,7 @@ void create_scene()
   red_presentation_node->set_blending_enabled(false); // no blending  
 
   //create the circle geometry 
-  std::shared_ptr<cg::NGonGeometryNode> circle_geometry = std::make_shared<cg::NGonGeometryNode>(cg::Point2(0.0f, 0.0f), 32, 0.4f);
+  std::shared_ptr<cg::NGonGeometryNode> circle_geometry = std::make_shared<cg::NGonGeometryNode>(cg::Point2(0.0f, 0.0f), 32, 4.5f);
   circle_geometry->set_name("CircleGeometry");
 
   if(!circle_geometry->create())
@@ -314,7 +426,7 @@ void create_scene()
   blue_presentation->set_blend_function(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   //create the hexagon geometry 
-  std::shared_ptr<cg::NGonGeometryNode> hexagon_geometry = std::make_shared<cg::NGonGeometryNode>(cg::Point2(-2.0f, -2.0f), 6, 0.8f);
+  std::shared_ptr<cg::NGonGeometryNode> hexagon_geometry = std::make_shared<cg::NGonGeometryNode>(cg::Point2(-2.0f, -2.0f), 6, 3.0f);
   hexagon_geometry->set_name("HexagonGeometry");
 
   if(!hexagon_geometry->create())
@@ -332,7 +444,7 @@ void create_scene()
   green_presentation->set_blending_enabled(true);
   green_presentation->set_blend_function(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-  std::shared_ptr<cg::NGonGeometryNode> octagon_geometry = std::make_shared<cg::NGonGeometryNode>(cg::Point2(2.5f, 2.5f), 8, 0.6f);
+  std::shared_ptr<cg::NGonGeometryNode> octagon_geometry = std::make_shared<cg::NGonGeometryNode>(cg::Point2(2.5f, 2.5f), 8, 2.0f);
   octagon_geometry->set_name("OctagonGeometry");
 
   if(!octagon_geometry->create())
@@ -349,7 +461,20 @@ void create_scene()
   std::cout << "  - Red circle (32-gon) at (0,0), radius 4.5, opaque" << std::endl;
   std::cout << "  - Blue hexagon at (-2,-2), radius 3, 25% opaque" << std::endl;
   std::cout << "  - Green octagon at (2.5,2.5), radius 2, 50% transparent" << std::endl;
- 
+
+  //add line shader and draggable nodes 
+  g_line_shader_node = std::make_shared<cg::LineShaderNode>();
+  g_line_shader_node->set_name("LineShader");
+  if(!g_line_shader_node->create())
+  {
+    std::cerr << "Failed to make line shader node - continuing without line support" << std::endl;
+    g_line_shader_node.reset();
+  }
+  else 
+  {
+    g_scene_root->add_child(g_line_shader_node);
+    std::cout << "Line shader node created successfully!" << std::endl;
+  }
   // Print the complete scene graph structure
   std::cout << "\nScene graph structure:" << std::endl;
   g_scene_root->print_graph(std::cout, 0);

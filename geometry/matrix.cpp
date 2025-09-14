@@ -190,8 +190,18 @@ HPoint3 Matrix4x4::operator*(const HPoint3 &v) const
 
 HPoint3 Matrix4x4::operator*(const Point3 &v) const
 {
-    // Student to define - Module 3
-    return HPoint3(0.0f, 0.0f, 0.0f, 1.0f);
+  // Convert Point3 to homogeneous coordinates (w=1) and multiply
+  float x = v.x;
+  float y = v.y;
+  float z = v.z;
+  float w = 1.0f;  // Point has w=1
+  
+  float result_x = m00() * x + m01() * y + m02() * z + m03() * w;
+  float result_y = m10() * x + m11() * y + m12() * z + m13() * w;
+  float result_z = m20() * x + m21() * y + m22() * z + m23() * w;
+  float result_w = m30() * x + m31() * y + m32() * z + m33() * w;
+  
+  return HPoint3(result_x, result_y, result_z, result_w);
 }
 
 Vector3 Matrix4x4::operator*(const Vector3 &v) const
