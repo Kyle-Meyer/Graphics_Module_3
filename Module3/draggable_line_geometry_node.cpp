@@ -121,7 +121,6 @@ void DraggableLineGeometryNode::update_end_point(const Point2& end_point)
     // Unbind buffer
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     
-    std::cout << "Updated end point to (" << end_point_.x << ", " << end_point_.y << ")" << std::endl;
 }
 
 void DraggableLineGeometryNode::draw(SceneState& scene_state)

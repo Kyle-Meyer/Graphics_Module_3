@@ -5,7 +5,7 @@ namespace cg
 
 bool PointShaderNode::get_locations()
 {
-    ortho_matrix_loc_ = glGetUniformLocation(shader_program_.get_program(), "ortho");
+    ortho_matrix_loc_ = glGetUniformLocation(shader_program_.get_program(), "ortho_matrix");
     if(ortho_matrix_loc_ < 0)
     {
         std::cout << "Error getting ortho matrix location\n";
@@ -38,4 +38,4 @@ void PointShaderNode::draw(SceneState &scene_state)
 
 int32_t PointShaderNode::get_position_loc() const { return position_loc_; }
 
-} // namespace cg
+} // namespace c_matrixg

@@ -20,6 +20,7 @@ PointNode::~PointNode()
 
 void PointNode::add(float x, float y, int32_t position_loc)
 {
+    
     vertex_list_.emplace_back(Point2(x, y));
 
     // Add the points to the VBO. Reloads entire VBO.

@@ -32,6 +32,9 @@
 #include "ngon_geometry_node.hpp"
 #include "line_shader_node.hpp"
 #include "draggable_line_geometry_node.hpp"
+#include "../Module2/point_shader_node.hpp"
+#include "../Module2/point_node.hpp"
+#include "intersection_tracker.hpp"
 
 namespace cg
 {
@@ -78,6 +81,15 @@ std::shared_ptr<cg::DraggableLineGeometryNode> g_current_line;
 
 // Mouse state tracking
 bool g_mouse_dragging = false;
+
+// Point shader node for intersection points (Module 2)
+std::shared_ptr<cg::PointShaderNode> g_point_shader_node;
+
+// Intersection tracker for draggable lines
+std::shared_ptr<cg::IntersectionTracker> g_intersection_tracker;
+
+// Store references to n-gons for intersection testing
+std::vector<std::shared_ptr<cg::NGonGeometryNode>> g_ngons;
 
 // Sleep function to help run a reasonable timer
 void sleep(int32_t milliseconds)
@@ -201,10 +213,6 @@ cg::Point2 screen_to_world(float screen_x, float screen_y)
     // Convert back to Cartesian coordinates
     cg::Point3 world_point = world_hpoint.to_cartesian();
     
-    std::cout << "Screen (" << screen_x << ", " << screen_y << ") -> "
-              << "NDC (" << ndc_x << ", " << ndc_y << ") -> "
-              << "World (" << world_point.x << ", " << world_point.y << ")" << std::endl;
-    
     return cg::Point2(world_point.x, world_point.y);
 }
 
@@ -262,16 +270,30 @@ bool handle_window_event(const SDL_Event &event)
 bool handle_key_event(const SDL_Event &event)
 {
     // bool key_down = event.type == SDL_KEYDOWN; // unused in this module
+    bool key_down = event.type == SDL_EVENT_KEY_DOWN;
     bool cont_program = true;
     bool upper_case = event.key.mod & SDL_KMOD_SHIFT || event.key.mod & SDL_KMOD_CAPS;
 
-    switch(event.key.key)
-    {
-        case SDLK_ESCAPE: cont_program = false; break;
-        case SDLK_M:
-            // STUDENT TODO
-            break;
-        default: break;
+    if (key_down) {
+        switch(event.key.key)
+        {
+            case SDLK_ESCAPE: 
+                cont_program = false; 
+                break;
+            case SDLK_M:
+                if (upper_case) {
+                    // Enable MSAA
+                    glEnable(GL_MULTISAMPLE);
+                    std::cout << "MSAA enabled" << std::endl;
+                } else {
+                    // Disable MSAA
+                    glDisable(GL_MULTISAMPLE);
+                    std::cout << "MSAA disabled" << std::endl;
+                }
+                break;
+            default: 
+                break;
+        }
     }
 
     return cont_program;
@@ -309,25 +331,32 @@ void handle_mouse_event(const SDL_Event &event)
     {
       g_line_shader_node->add_child(g_current_line);
       g_mouse_dragging = true;
-      std::cout << "Draggable line created" << std::endl;
+      std::cout << "Draggable line created and dragging started" << std::endl;
+      
+      // Start intersection tracking
+      if (g_intersection_tracker)
+        g_intersection_tracker->update_intersections(world_pos, world_pos);
     } 
     else 
-    {
       g_current_line.reset();
-    }
   }
 
   else if (event.type == SDL_EVENT_MOUSE_BUTTON_UP && event.button.button == SDL_BUTTON_LEFT)
   {
     if (g_mouse_dragging && g_current_line) 
     {
-      std::cout << "Finished dragging line - line stays on screen" << std::endl;
+      // Remove the current line by destroying the line shader's children
+      g_line_shader_node->destroy(); // This calls children_.clear() in the base class
       
-      // Just stop dragging - don't remove the line from the scene
-      g_current_line.reset(); // Clear the current line pointer
+      // Clear intersection points
+      if (g_intersection_tracker) 
+        g_intersection_tracker->clear_intersections();
+      
+      // Reset the current line pointer
+      g_current_line.reset();
       g_mouse_dragging = false;
       
-      // The line stays as a child of g_line_shader_node and will continue to render
+      std::cout << "Draggable line and intersection points removed" << std::endl;
     }
   }
 }
@@ -337,13 +366,24 @@ void handle_mouse_event(const SDL_Event &event)
  */
 void handle_mouse_motion_event(const SDL_Event &event)
 {
-  if (g_mouse_dragging && g_current_line && g_line_shader_node) 
+  if (g_mouse_dragging && g_current_line) 
   {
-      float x_pos = static_cast<float>(event.motion.x);
-      float y_pos = static_cast<float>(event.motion.y);
-      
-      cg::Point2 world_pos = screen_to_world(x_pos, y_pos);
-      g_current_line->update_end_point(world_pos);
+    float x_pos = static_cast<float>(event.motion.x);
+    float y_pos = static_cast<float>(event.motion.y);
+    
+    cg::Point2 world_pos = screen_to_world(x_pos, y_pos);
+    
+    // Update the line end point
+    g_current_line->update_end_point(world_pos);
+    
+    // Update intersection points
+    if (g_intersection_tracker) 
+    {
+      g_intersection_tracker->update_intersections(
+        g_current_line->get_start_point(), 
+        world_pos
+      );
+    }
   }
 }
 
@@ -418,6 +458,9 @@ void create_scene()
   //build hierarchy: shader -> red presentation -> circle geometry
   red_presentation_node->add_child(circle_geometry);
   shader_node->add_child(red_presentation_node);
+  
+  // Store for intersection testing
+  g_ngons.push_back(circle_geometry);
 
   //======= BLUE HEXAGON CODE ==========
   std::shared_ptr<cg::PresentationNode> blue_presentation = std::make_shared<cg::PresentationNode>(cg::Color4(0.0f, 0.0f, 0.75f, 0.25f));
@@ -437,6 +480,9 @@ void create_scene()
 
   blue_presentation->add_child(hexagon_geometry);
   shader_node->add_child(blue_presentation);
+  
+  // Store for intersection testing
+  g_ngons.push_back(hexagon_geometry);
 
   //======= GREEN OCTAGON CODE ==========
   std::shared_ptr<cg::PresentationNode> green_presentation = std::make_shared<cg::PresentationNode>(cg::Color4(0.0f, 0.75f, 0.0f, 0.5f));
@@ -455,14 +501,11 @@ void create_scene()
 
   green_presentation->add_child(octagon_geometry);
   shader_node->add_child(green_presentation);
-
-  std::cout << "Scene graph created successfully!" << std::endl;
-  std::cout << "Objects created:" << std::endl;
-  std::cout << "  - Red circle (32-gon) at (0,0), radius 4.5, opaque" << std::endl;
-  std::cout << "  - Blue hexagon at (-2,-2), radius 3, 25% opaque" << std::endl;
-  std::cout << "  - Green octagon at (2.5,2.5), radius 2, 50% transparent" << std::endl;
-
-  //add line shader and draggable nodes 
+  
+  // Store for intersection testing
+  g_ngons.push_back(octagon_geometry);
+ 
+  //======= LINE SHADER AND DRAGGABLE NODES ==========
   g_line_shader_node = std::make_shared<cg::LineShaderNode>();
   g_line_shader_node->set_name("LineShader");
   if(!g_line_shader_node->create())
@@ -475,6 +518,32 @@ void create_scene()
     g_scene_root->add_child(g_line_shader_node);
     std::cout << "Line shader node created successfully!" << std::endl;
   }
+
+  //======= POINT SHADER FOR INTERSECTION POINTS (MODULE 2) ==========
+  g_point_shader_node = std::make_shared<cg::PointShaderNode>();
+  g_point_shader_node->set_name("PointShader");
+  
+  // Point shader needs vertex and fragment shader files from Module 2
+  if(!g_point_shader_node->create("Module2/points.vert", "Module2/points.frag"))
+  {
+    std::cerr << "Failed to make point shader node - continuing without intersection point support" << std::endl;
+    g_point_shader_node.reset();
+  }
+  else 
+  {
+    g_scene_root->add_child(g_point_shader_node);
+    std::cout << "Point shader node created successfully!" << std::endl;
+    
+    // Initialize intersection tracker with point shader and n-gons
+    g_intersection_tracker = std::make_shared<cg::IntersectionTracker>();
+    if (!g_intersection_tracker->initialize(g_point_shader_node, g_ngons)) {
+      std::cerr << "Failed to initialize intersection tracker" << std::endl;
+      g_intersection_tracker.reset();
+    } else {
+      std::cout << "Intersection tracker initialized successfully!" << std::endl;
+    }
+  }
+
   // Print the complete scene graph structure
   std::cout << "\nScene graph structure:" << std::endl;
   g_scene_root->print_graph(std::cout, 0);
@@ -552,6 +621,7 @@ bool init_openGL()
   
   glEnable(GL_MULTISAMPLE);
 
+  glEnable(GL_PROGRAM_POINT_SIZE);
   // Display OpenGL information
   std::cout << "OpenGL context created successfully" << std::endl;
   std::cout << "OpenGL  " << glGetString(GL_VERSION) << ", GLSL "

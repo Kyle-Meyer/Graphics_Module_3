@@ -172,7 +172,17 @@ foreach( target_i ${TARGET_LIST})
         ${CMAKE_SOURCE_DIR}/${target_i}/*.c
         ${CMAKE_SOURCE_DIR}/${target_i}/*.cpp
     )
-
+    
+    if(${target_i} STREQUAL "Module3")
+    list(APPEND TARGET_SRC_FILES 
+        ${CMAKE_SOURCE_DIR}/Module2/point_shader_node.cpp
+        ${CMAKE_SOURCE_DIR}/Module2/point_node.cpp
+    )
+    list(APPEND TARGET_HEADER_FILES
+        ${CMAKE_SOURCE_DIR}/Module2/point_shader_node.hpp
+        ${CMAKE_SOURCE_DIR}/Module2/point_node.hpp
+    )
+endif()
     file(GLOB TARGET_HEADER_FILES 
         ${CMAKE_SOURCE_DIR}/${target_i}/*.h
         ${CMAKE_SOURCE_DIR}/${target_i}/*.hpp
@@ -258,5 +268,10 @@ endif()
 file(COPY 
     ${CMAKE_SOURCE_DIR}/Module3/basic_vert.glsl
     ${CMAKE_SOURCE_DIR}/Module3/basic_frag.glsl
+    DESTINATION ${CMAKE_BINARY_DIR}/Module3/
+)
+file(COPY 
+    ${CMAKE_SOURCE_DIR}/Module2/points.vert
+    ${CMAKE_SOURCE_DIR}/Module2/points.frag
     DESTINATION ${CMAKE_BINARY_DIR}/Module3/
 )

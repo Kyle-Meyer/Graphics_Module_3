@@ -227,4 +227,44 @@ void NGonGeometryNode::generate_vertices(std::vector<float>& vertices, std::vect
     std::cout << "Generated " << vertices.size()/2 << " vertices and " << indices.size()/3 << " triangles" << std::endl;
 }
 
+
+void NGonGeometryNode::get_perimeter_edges(std::vector<cg::LineSegment2>& edges) const
+{
+    edges.clear();
+    edges.reserve(num_sides_);
+    
+    std::cout << "Extracting " << num_sides_ << " edges from n-gon at (" 
+              << center_.x << ", " << center_.y << ") with radius " << radius_ << std::endl;
+    
+    // Generate the same perimeter vertices as in generate_vertices()
+    std::vector<Point2> perimeter_points;
+    perimeter_points.reserve(num_sides_);
+    
+    for (int i = 0; i < num_sides_; ++i) {
+        // Calculate angle for this vertex (counter-clockwise from positive X-axis)
+        float angle = (2.0f * PI * i) / static_cast<float>(num_sides_);
+        
+        // Calculate vertex position
+        float x = center_.x + radius_ * std::cos(angle);
+        float y = center_.y + radius_ * std::sin(angle);
+        
+        perimeter_points.emplace_back(x, y);
+    }
+    
+    // Create line segments between consecutive perimeter points
+    for (int i = 0; i < num_sides_; ++i) {
+        const Point2& current = perimeter_points[i];
+        const Point2& next = perimeter_points[(i + 1) % num_sides_]; // Wrap around
+        
+        edges.emplace_back(current, next);
+        
+        if (i < 4) { // Only print first 4 edges to avoid spam
+            std::cout << "  Edge " << i << ": (" << current.x << ", " << current.y 
+                      << ") -> (" << next.x << ", " << next.y << ")" << std::endl;
+        }
+    }
+    
+    std::cout << "Extracted " << edges.size() << " perimeter edges" << std::endl;
+}
+
 }
