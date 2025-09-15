@@ -16,7 +16,7 @@ NGonGeometryNode::NGonGeometryNode(const Point2& center, int num_sides, float ra
     // Ensure minimum of 3 sides
     if (num_sides_ < 3) {
         num_sides_ = 3;
-        std::cout << "Warning: NGon requires at least 3 sides. Setting to 3." << std::endl;
+        std::cout << "Warning: NGon requires at least 3 sides. Setting to 3." << "\n";
     }
     
     node_type_ = SceneNodeType::GEOMETRY;
@@ -37,23 +37,23 @@ bool NGonGeometryNode::create()
   vertex_count_ = static_cast<int>(vertices.size()) / 2; // 2 components per vertex
   index_count_ = static_cast<int>(indices.size());
   
-  std::cout << "NGon has " << vertex_count_ << " vertices and " << index_count_ << " indices" << std::endl;
+  std::cout << "NGon has " << vertex_count_ << " vertices and " << index_count_ << " indices" << "\n";
   
   // Print first few vertices for debugging
   std::cout << "First few vertices: ";
   for (size_t i = 0; i < std::min((size_t)10, vertices.size()); i++) {
       std::cout << vertices[i] << " ";
   }
-  std::cout << std::endl;
+  std::cout << "\n";
   
   // Generate OpenGL objects
-  std::cout << "About to generate VAO..." << std::endl;
+  std::cout << "About to generate VAO..." << "\n";
   glGenVertexArrays(1, &vao_);
   cg::check_error("glGenVertexArrays");
 
-  std::cout << "Generated VAO: " << vao_ << std::endl;
+  std::cout << "Generated VAO: " << vao_ << "\n";
   if (vao_ == 0) {
-      std::cout << "ERROR: VAO generation failed!" << std::endl;
+      std::cout << "ERROR: VAO generation failed!" << "\n";
       return false;
   }
 
@@ -97,11 +97,11 @@ bool NGonGeometryNode::create()
   // Verify the setup worked
   GLint max_vertex_attribs;
   glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &max_vertex_attribs);
-  std::cout << "Max vertex attributes: " << max_vertex_attribs << std::endl;
+  std::cout << "Max vertex attributes: " << max_vertex_attribs << "\n";
 
   cg::check_error("NGonGeometryNode::create - end");
   
-  std::cout << "NGonGeometryNode::create completed successfully" << std::endl;
+  std::cout << "NGonGeometryNode::create completed successfully" << "\n";
   return true;
 }
 
@@ -109,7 +109,7 @@ void NGonGeometryNode::draw(SceneState& scene_state)
 {
     if(vao_ == 0)
     {
-        std::cout << "Warning: NGon not initialized, call create() first" << std::endl;
+        std::cout << "Warning: NGon not initialized, call create() first" << "\n";
         return;
     }
 
@@ -178,7 +178,7 @@ void NGonGeometryNode::generate_vertices(std::vector<float>& vertices, std::vect
     indices.clear();
     
     std::cout << "Generating " << num_sides_ << "-gon at (" << center_.x << ", " << center_.y 
-              << ") with radius " << radius_ << std::endl;
+              << ") with radius " << radius_ << "\n";
     
     // Reserve space for efficiency
     vertices.reserve((num_sides_ + 1) * 2); // +1 for center vertex, *2 for x,y coordinates
@@ -187,10 +187,10 @@ void NGonGeometryNode::generate_vertices(std::vector<float>& vertices, std::vect
     // Add center vertex first
     vertices.push_back(center_.x);
     vertices.push_back(center_.y);
-    std::cout << "Center vertex: (" << center_.x << ", " << center_.y << ")" << std::endl;
+    std::cout << "Center vertex: (" << center_.x << ", " << center_.y << ")" << "\n";
     
     // Generate vertices around the circle
-    std::cout << "Perimeter vertices:" << std::endl;
+    std::cout << "Perimeter vertices:" << "\n";
     for (int i = 0; i < num_sides_; ++i) {
         // Calculate angle for this vertex (counter-clockwise from positive X-axis)
         float angle = (2.0f * PI * i) / static_cast<float>(num_sides_);
@@ -203,12 +203,12 @@ void NGonGeometryNode::generate_vertices(std::vector<float>& vertices, std::vect
         vertices.push_back(y);
         
         if (i < 8) { // Only print first 8 to avoid spam
-            std::cout << "  Vertex " << i << ": (" << x << ", " << y << ") at angle " << angle << " radians" << std::endl;
+            std::cout << "  Vertex " << i << ": (" << x << ", " << y << ") at angle " << angle << " radians" << "\n";
         }
     }
     
     // Generate triangle indices using triangle fan approach
-    std::cout << "Triangle indices:" << std::endl;
+    std::cout << "Triangle indices:" << "\n";
     for (int i = 0; i < num_sides_; ++i) 
   {
         unsigned int center_idx = 0;
@@ -220,11 +220,11 @@ void NGonGeometryNode::generate_vertices(std::vector<float>& vertices, std::vect
         indices.push_back(next_idx);        // Next perimeter vertex (wrap around)
         
         if (i < 4) { // Only print first 4 triangles to avoid spam
-            std::cout << "  Triangle " << i << ": [" << center_idx << ", " << current_idx << ", " << next_idx << "]" << std::endl;
+            std::cout << "  Triangle " << i << ": [" << center_idx << ", " << current_idx << ", " << next_idx << "]" << "\n";
         }
     }
     
-    std::cout << "Generated " << vertices.size()/2 << " vertices and " << indices.size()/3 << " triangles" << std::endl;
+    std::cout << "Generated " << vertices.size()/2 << " vertices and " << indices.size()/3 << " triangles" << "\n";
 }
 
 
@@ -234,7 +234,7 @@ void NGonGeometryNode::get_perimeter_edges(std::vector<cg::LineSegment2>& edges)
     edges.reserve(num_sides_);
     
     std::cout << "Extracting " << num_sides_ << " edges from n-gon at (" 
-              << center_.x << ", " << center_.y << ") with radius " << radius_ << std::endl;
+              << center_.x << ", " << center_.y << ") with radius " << radius_ << "\n";
     
     // Generate the same perimeter vertices as in generate_vertices()
     std::vector<Point2> perimeter_points;
@@ -260,11 +260,11 @@ void NGonGeometryNode::get_perimeter_edges(std::vector<cg::LineSegment2>& edges)
         
         if (i < 4) { // Only print first 4 edges to avoid spam
             std::cout << "  Edge " << i << ": (" << current.x << ", " << current.y 
-                      << ") -> (" << next.x << ", " << next.y << ")" << std::endl;
+                      << ") -> (" << next.x << ", " << next.y << ")" << "\n";
         }
     }
     
-    std::cout << "Extracted " << edges.size() << " perimeter edges" << std::endl;
+    std::cout << "Extracted " << edges.size() << " perimeter edges" << "\n";
 }
 
 }

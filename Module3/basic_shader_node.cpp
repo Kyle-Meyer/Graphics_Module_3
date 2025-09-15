@@ -21,17 +21,17 @@ bool BasicShaderNode::create()
 {
     if(!ShaderNode::create("Module3/basic_vert.glsl", "Module3/basic_frag.glsl"))
     {
-        std::cout << "Basic Node, failed to create shader program from files" << std::endl;
+        std::cout << "Basic Node, failed to create shader program from files" << "\n";
         return false; 
     } 
 
     // Check if shader program is valid
     GLuint program = shader_program_.get_program();
-    std::cout << "Shader program ID: " << program << std::endl;
+    std::cout << "Shader program ID: " << program << "\n";
     
     GLint link_status;
     glGetProgramiv(program, GL_LINK_STATUS, &link_status);
-    std::cout << "Shader link status: " << (link_status == GL_TRUE ? "SUCCESS" : "FAILED") << std::endl;
+    std::cout << "Shader link status: " << (link_status == GL_TRUE ? "SUCCESS" : "FAILED") << "\n";
     
     if (link_status != GL_TRUE) {
         GLint log_length;
@@ -39,17 +39,17 @@ bool BasicShaderNode::create()
         if (log_length > 0) {
             std::vector<char> log(log_length);
             glGetProgramInfoLog(program, log_length, nullptr, log.data());
-            std::cout << "Shader link error: " << log.data() << std::endl;
+            std::cout << "Shader link error: " << log.data() << "\n";
         }
     }
 
     if(!get_locations())
     {
-        std::cout << "Basic shader node failed to get shader locations" << std::endl;
+        std::cout << "Basic shader node failed to get shader locations" << "\n";
         return false;
     }
 
-    std::cout << "BasicShaderNode created successfully!" << std::endl;
+    std::cout << "BasicShaderNode created successfully!" << "\n";
     return true;
 }
 
@@ -59,35 +59,35 @@ bool BasicShaderNode::get_locations()
 
   if(program == 0)
   {
-    std::cout << "basic shader node get_locations failed to get shader program!" << std::endl;
+    std::cout << "basic shader node get_locations failed to get shader program!" << "\n";
     return false;
   }
 
   GLint pos_loc = glGetAttribLocation(program, "position");
   if(pos_loc == -1)
   {
-    std::cout << "BasicShaderNode: could not find position attribute" << std::endl;
+    std::cout << "BasicShaderNode: could not find position attribute" << "\n";
     return false;
   }
 
   GLint ortho_loc = glGetUniformLocation(program, "ortho_matrix");
   if(ortho_loc == -1)
   {
-    std::cout << "BasicShaderNode: could not get ortho matrix uniform" << std::endl;
+    std::cout << "BasicShaderNode: could not get ortho matrix uniform" << "\n";
     return false; 
   }
 
   GLint color_loc = glGetUniformLocation(program, "color");
   if(color_loc == -1)
   {
-    std::cout << "BasicShaderNode: could not get color uniform" << std::endl;
+    std::cout << "BasicShaderNode: could not get color uniform" << "\n";
     return false;
   }
 
-  std::cout << "BasicShaderNode: Found all shader locations:" << std::endl;
-  std::cout << "  position attribute: " << pos_loc << std::endl;
-  std::cout << "  ortho_matrix uniform: " << ortho_loc << std::endl;
-  std::cout << "  color uniform: " << color_loc << std::endl;
+  std::cout << "BasicShaderNode: Found all shader locations:" << "\n";
+  std::cout << "  position attribute: " << pos_loc << "\n";
+  std::cout << "  ortho_matrix uniform: " << ortho_loc << "\n";
+  std::cout << "  color uniform: " << color_loc << "\n";
 
   return true;
 }

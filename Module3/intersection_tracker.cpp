@@ -9,14 +9,14 @@ namespace cg
 IntersectionTracker::IntersectionTracker()
     : point_shader_(nullptr), intersection_points_(nullptr)
 {
-    std::cout << "IntersectionTracker: Created" << std::endl;
+    std::cout << "IntersectionTracker: Created" << "\n";
 }
 
 bool IntersectionTracker::initialize(std::shared_ptr<PointShaderNode> point_shader,
                                    const std::vector<std::shared_ptr<NGonGeometryNode>>& ngons)
 {
     if (!point_shader) {
-        std::cout << "IntersectionTracker: Error - null point shader" << std::endl;
+        std::cout << "IntersectionTracker: Error - null point shader" << "\n";
         return false;
     }
     
@@ -28,24 +28,15 @@ bool IntersectionTracker::initialize(std::shared_ptr<PointShaderNode> point_shad
     // Add to point shader as a scene node (PointNode inherits from SceneNode)
     point_shader_->add_child(intersection_points_);
     
-    // Register n-gons with distinct colors for each
-    std::vector<Color4> colors = {
-        Color4(1.0f, 0.4f, 0.4f, 0.95f),  // Bright red for first n-gon
-        Color4(0.4f, 0.4f, 1.0f, 0.95f),  // Bright blue for second n-gon  
-        Color4(0.4f, 1.0f, 0.4f, 0.95f),  // Bright green for third n-gon
-        Color4(1.0f, 1.0f, 0.4f, 0.95f),  // Yellow for any additional n-gons
-        Color4(1.0f, 0.4f, 1.0f, 0.95f)   // Magenta for any additional n-gons
-    };
     
     for (size_t i = 0; i < ngons.size(); ++i) {
         if (!ngons[i]) {
-            std::cout << "IntersectionTracker: Warning - null n-gon at index " << i << std::endl;
+            std::cout << "IntersectionTracker: Warning - null n-gon at index " << i << "\n";
             continue;
         }
         
         NGonInfo info;
         info.ngon = ngons[i];
-        info.intersection_color = colors[i % colors.size()];
         info.point_size = 28.0f + (i * 4.0f); // Vary size: 28, 32, 36, etc.
         
         // Cache the edges
@@ -56,11 +47,11 @@ bool IntersectionTracker::initialize(std::shared_ptr<PointShaderNode> point_shad
         std::cout << "IntersectionTracker: Registered '" << ngons[i]->get_name() 
                   << "' with " << info.edges.size() << " edges, color (" 
                   << info.intersection_color.r << ", " << info.intersection_color.g 
-                  << ", " << info.intersection_color.b << "), size " << info.point_size << std::endl;
+                  << ", " << info.intersection_color.b << "), size " << info.point_size << "\n";
     }
     
     std::cout << "IntersectionTracker: Initialized successfully with " 
-              << ngon_info_.size() << " n-gons" << std::endl;
+              << ngon_info_.size() << " n-gons" << "\n";
     return true;
 }
 

@@ -108,12 +108,12 @@ void sleep(int32_t milliseconds)
 void reshape(int32_t width, int32_t height)
 {
 
-    std::cout << "=== RESHAPE CALLED ===" << std::endl;
+    std::cout << "=== RESHAPE CALLED ===" << "\n";
     glViewport(0, 0, width, height);
     cg::check_error("glViewport");
     
     float aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
-    std::cout << "Window: " << width << "x" << height << ", aspect ratio: " << aspect_ratio << std::endl;
+    std::cout << "Window: " << width << "x" << height << ", aspect ratio: " << aspect_ratio << "\n";
 
     float world_width, world_height;
 
@@ -137,9 +137,9 @@ void reshape(int32_t width, int32_t height)
     float near_plane = -1.0f;
     float far_plane = 1.0f;
 
-    std::cout << "World dimensions: " << world_width << "x" << world_height << std::endl;
+    std::cout << "World dimensions: " << world_width << "x" << world_height << "\n";
     std::cout << "Projection bounds: left=" << left << ", right=" << right 
-              << ", bottom=" << bottom << ", top=" << top << std::endl;
+              << ", bottom=" << bottom << ", top=" << top << "\n";
 
     // Calculate orthographic matrix components
     float width_range = right - left;
@@ -147,7 +147,7 @@ void reshape(int32_t width, int32_t height)
     float depth_range = far_plane - near_plane;
     
     std::cout << "Ranges: width=" << width_range << ", height=" << height_range 
-              << ", depth=" << depth_range << std::endl;
+              << ", depth=" << depth_range << "\n";
 
     // Fill the array with zeros first
     std::fill(g_scene_state.ortho.begin(), g_scene_state.ortho.end(), 0.0f);
@@ -177,21 +177,21 @@ void reshape(int32_t width, int32_t height)
 
     g_window_width = width;
     g_window_height = height;
-    std::cout << "Matrix components:" << std::endl;
-    std::cout << "  Scale X: " << g_scene_state.ortho[0] << std::endl;
-    std::cout << "  Scale Y: " << g_scene_state.ortho[5] << std::endl;
-    std::cout << "  Scale Z: " << g_scene_state.ortho[10] << std::endl;
-    std::cout << "  Trans X: " << g_scene_state.ortho[12] << std::endl;
-    std::cout << "  Trans Y: " << g_scene_state.ortho[13] << std::endl;
-    std::cout << "  Trans Z: " << g_scene_state.ortho[14] << std::endl;
+    std::cout << "Matrix components:" << "\n";
+    std::cout << "  Scale X: " << g_scene_state.ortho[0]  << "\n";
+    std::cout << "  Scale Y: " << g_scene_state.ortho[5]  << "\n";
+    std::cout << "  Scale Z: " << g_scene_state.ortho[10] << "\n";
+    std::cout << "  Trans X: " << g_scene_state.ortho[12] << "\n";
+    std::cout << "  Trans Y: " << g_scene_state.ortho[13] << "\n";
+    std::cout << "  Trans Z: " << g_scene_state.ortho[14] << "\n";
     
 
-    std::cout << "Inverse matrix components:" << std::endl;
-    std::cout << "  Inv Scale X: " << g_inverse_projection.m00() << std::endl;
-    std::cout << "  Inv Scale Y: " << g_inverse_projection.m11() << std::endl;
-    std::cout << "  Inv Trans X: " << g_inverse_projection.m03() << std::endl;
-    std::cout << "  Inv Trans Y: " << g_inverse_projection.m13() << std::endl;
-    std::cout << "=== RESHAPE COMPLETE ===" << std::endl;
+    std::cout << "Inverse matrix components:" << "\n";
+    std::cout << "  Inv Scale X: " << g_inverse_projection.m00() << "\n";
+    std::cout << "  Inv Scale Y: " << g_inverse_projection.m11() << "\n";
+    std::cout << "  Inv Trans X: " << g_inverse_projection.m03() << "\n";
+    std::cout << "  Inv Trans Y: " << g_inverse_projection.m13() << "\n";
+    std::cout << "=== RESHAPE COMPLETE ===" << "\n";
 
 }
 
@@ -221,25 +221,12 @@ cg::Point2 screen_to_world(float screen_x, float screen_y)
  */
 void display(void)
 {
-    static int frame_count = 0;
-    if (frame_count < 5) {  // Only print first 5 frames to avoid spam
-        std::cout << "Display frame " << frame_count << std::endl;
-    }
-    frame_count++;
 
     // Clear the framebuffer
     glClear(GL_COLOR_BUFFER_BIT);
     
-    if (frame_count < 5) {
-        std::cout << "About to draw scene root" << std::endl;
-    }
-    
     g_scene_root->draw(g_scene_state);
     cg::check_error("After Draw");
-    
-    if (frame_count < 5) {
-        std::cout << "Finished drawing, swapping buffers" << std::endl;
-    }
     
     // Swap buffers
     SDL_GL_SwapWindow(g_sdl_window);
@@ -258,7 +245,7 @@ bool handle_window_event(const SDL_Event &event)
         int width, height;
         SDL_GetWindowSize(g_sdl_window, &width, &height);
         reshape(width, height);
-        std::cout << "Window resized, calling reshape(" << width << ", " << height << ")" << std::endl;
+        std::cout << "Window resized, calling reshape(" << width << ", " << height << ")" << "\n";
     }
 
     return cont_program;
@@ -284,11 +271,11 @@ bool handle_key_event(const SDL_Event &event)
                 if (upper_case) {
                     // Enable MSAA
                     glEnable(GL_MULTISAMPLE);
-                    std::cout << "MSAA enabled" << std::endl;
+                    std::cout << "MSAA enabled" << "\n";
                 } else {
                     // Disable MSAA
                     glDisable(GL_MULTISAMPLE);
-                    std::cout << "MSAA disabled" << std::endl;
+                    std::cout << "MSAA disabled" << "\n";
                 }
                 break;
             default: 
@@ -308,56 +295,39 @@ void handle_mouse_event(const SDL_Event &event)
 {
   float x_pos = static_cast<float>(event.button.x);
   float y_pos = static_cast<float>(event.button.y);
-
-  cg::Point2 world_pos = screen_to_world(x_pos, y_pos);
   
-  std::cout << "Mouse click at screen (" << x_pos << ", " << y_pos << ") "
-              << "= world (" << world_pos.x << ", " << world_pos.y << ")" << std::endl;
+  cg::Point2 world_pos = screen_to_world(x_pos, y_pos);
   
   if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTTON_LEFT)
   {
-    if (!g_line_shader_node) 
-    {
-      std::cout << "Line shader not available" << std::endl;
-      return;
-    }
-        
-    std::cout << "Starting draggable line at: (" << world_pos.x << ", " << world_pos.y << ")" << std::endl;
-    
-    g_current_line = std::make_shared<cg::DraggableLineGeometryNode>(world_pos);
-    g_current_line->set_name("DraggableLine");
-    
-    if (g_current_line->create()) 
-    {
-      g_line_shader_node->add_child(g_current_line);
+      if (!g_current_line) {
+          std::cout << "Persistent line not available" << "\n";
+          return;
+      }
+      
+      std::cout << "Starting draggable line at: (" << world_pos.x << ", " << world_pos.y << ")" << "\n";
+      
+      // Reset line to start position and make visible
+      g_current_line->reset_line(world_pos, world_pos);
+      g_current_line->set_visible(true);
       g_mouse_dragging = true;
-      std::cout << "Draggable line created and dragging started" << std::endl;
       
       // Start intersection tracking
-      if (g_intersection_tracker)
-        g_intersection_tracker->update_intersections(world_pos, world_pos);
-    } 
-    else 
-      g_current_line.reset();
+      if (g_intersection_tracker) {
+          g_intersection_tracker->update_intersections(world_pos, world_pos);
+      }
   }
-
   else if (event.type == SDL_EVENT_MOUSE_BUTTON_UP && event.button.button == SDL_BUTTON_LEFT)
   {
-    if (g_mouse_dragging && g_current_line) 
-    {
-      // Remove the current line by destroying the line shader's children
-      g_line_shader_node->destroy(); // This calls children_.clear() in the base class
-      
-      // Clear intersection points
-      if (g_intersection_tracker) 
-        g_intersection_tracker->clear_intersections();
-      
-      // Reset the current line pointer
-      g_current_line.reset();
-      g_mouse_dragging = false;
-      
-      std::cout << "Draggable line and intersection points removed" << std::endl;
-    }
+      if (g_mouse_dragging && g_current_line) {
+          g_current_line->set_visible(false);
+          g_mouse_dragging = false;
+          
+          // Clear intersection points
+          if (g_intersection_tracker) {
+              g_intersection_tracker->clear_intersections();
+          }
+      }
   }
 }
 
@@ -424,7 +394,7 @@ bool handle_events()
  */
 void create_scene()
 {
-  std::cout << "Creating scene graph..." << std::endl;
+  std::cout << "Creating scene graph..." << "\n";
   
   // Create the root scene node
   g_scene_root = std::make_shared<cg::SceneNode>();
@@ -434,7 +404,7 @@ void create_scene()
   shader_node->set_name("BasicShader");
   if(!shader_node->create())
   {
-    std::cerr << "Failed to make shader node" << std::endl;
+    std::cerr << "Failed to make shader node" << "\n";
     return;
   }
 
@@ -451,7 +421,7 @@ void create_scene()
 
   if(!circle_geometry->create())
   {
-    std::cerr << "Failed to create circle geometry" << std::endl;
+    std::cerr << "Failed to create circle geometry" << "\n";
     return;
   } 
 
@@ -474,7 +444,7 @@ void create_scene()
 
   if(!hexagon_geometry->create())
   {
-    std::cerr << "Failed to create hexagon geometry" << std::endl;
+    std::cerr << "Failed to create hexagon geometry" << "\n";
     return;
   }
 
@@ -495,7 +465,7 @@ void create_scene()
 
   if(!octagon_geometry->create())
   {
-    std::cerr << "Failed to create octagon geometry" << std::endl;
+    std::cerr << "Failed to create octagon geometry" << "\n";
     return;
   }
 
@@ -510,13 +480,23 @@ void create_scene()
   g_line_shader_node->set_name("LineShader");
   if(!g_line_shader_node->create())
   {
-    std::cerr << "Failed to make line shader node - continuing without line support" << std::endl;
+    std::cerr << "Failed to make line shader node - continuing without line support" << "\n";
     g_line_shader_node.reset();
   }
   else 
   {
+    g_current_line = std::make_shared<cg::DraggableLineGeometryNode>(cg::Point2(0.0f, 0.0f));
+    if(!g_current_line->create())
+    {
+      std::cerr << "Failed to make draggable line node!" << "\n";
+      return;
+    }
+    g_current_line->set_name("DraggableLine");
+    g_current_line->set_visible(false);
+    
+    g_line_shader_node->add_child(g_current_line);
     g_scene_root->add_child(g_line_shader_node);
-    std::cout << "Line shader node created successfully!" << std::endl;
+    std::cout << "Line shader node and draggable line node created successfully!" << "\n";
   }
 
   //======= POINT SHADER FOR INTERSECTION POINTS (MODULE 2) ==========
@@ -526,26 +506,26 @@ void create_scene()
   // Point shader needs vertex and fragment shader files from Module 2
   if(!g_point_shader_node->create("Module2/points.vert", "Module2/points.frag"))
   {
-    std::cerr << "Failed to make point shader node - continuing without intersection point support" << std::endl;
+    std::cerr << "Failed to make point shader node - continuing without intersection point support" << "\n";
     g_point_shader_node.reset();
   }
   else 
   {
     g_scene_root->add_child(g_point_shader_node);
-    std::cout << "Point shader node created successfully!" << std::endl;
+    std::cout << "Point shader node created successfully!" << "\n";
     
     // Initialize intersection tracker with point shader and n-gons
     g_intersection_tracker = std::make_shared<cg::IntersectionTracker>();
     if (!g_intersection_tracker->initialize(g_point_shader_node, g_ngons)) {
-      std::cerr << "Failed to initialize intersection tracker" << std::endl;
+      std::cerr << "Failed to initialize intersection tracker" << "\n";
       g_intersection_tracker.reset();
     } else {
-      std::cout << "Intersection tracker initialized successfully!" << std::endl;
+      std::cout << "Intersection tracker initialized successfully!" << "\n";
     }
   }
 
   // Print the complete scene graph structure
-  std::cout << "\nScene graph structure:" << std::endl;
+  std::cout << "\nScene graph structure:" << "\n";
   g_scene_root->print_graph(std::cout, 0);
   
   cg::check_error("create_scene");
@@ -555,11 +535,11 @@ bool init_sdl()
 {
   if(!SDL_InitSubSystem(SDL_INIT_VIDEO))
   {
-    std::cerr << "Failed to init SDL sub system: Video " << SDL_GetError() << std::endl;
+    std::cerr << "Failed to init SDL sub system: Video " << SDL_GetError() << "\n";
     return false;
   }
 
-  std::cout << "initialized SDL video!" << std::endl;
+  std::cout << "initialized SDL video!" << "\n";
   return true;
 }
 
@@ -593,12 +573,12 @@ bool init_display_mode()
 
   if(!g_sdl_window)
   {
-    std::cerr << "could not create SDL WINDOW! " << SDL_GetError() << std::endl;
+    std::cerr << "could not create SDL WINDOW! " << SDL_GetError() << "\n";
     return false;
   }
 
   SDL_SetWindowPosition(g_sdl_window, 200, 200);
-  std::cout << "created window successfully" << std::endl;
+  std::cout << "created window successfully" << "\n";
   return true;
 }
 
@@ -607,31 +587,33 @@ bool init_openGL()
   g_gl_context = SDL_GL_CreateContext(g_sdl_window);
   if(!g_gl_context)
   {
-    std::cerr << "could not create gl context: " << SDL_GetError() << std::endl;
+    std::cerr << "could not create gl context: " << SDL_GetError() << "\n";
     return false;
   }
 
   if(SDL_GL_SetSwapInterval(1) != 0)
   {
-    std::cout << "Vsync is NOT on" << std::endl;
+    std::cout << "Vsync is NOT on" << "\n";
   }
 
   //black
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   
   glEnable(GL_MULTISAMPLE);
-
+  
+  glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+  
   glEnable(GL_PROGRAM_POINT_SIZE);
   // Display OpenGL information
-  std::cout << "OpenGL context created successfully" << std::endl;
+  std::cout << "OpenGL context created successfully" << "\n";
   std::cout << "OpenGL  " << glGetString(GL_VERSION) << ", GLSL "
-            << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
+            << glGetString(GL_SHADING_LANGUAGE_VERSION) << "\n";
   
   // Check if we got the MSAA we requested
   int msaa_buffers, msaa_samples;
   SDL_GL_GetAttribute(SDL_GL_MULTISAMPLEBUFFERS, &msaa_buffers);
   SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &msaa_samples);
-  std::cout << "MSAA: " << msaa_buffers << " buffers, " << msaa_samples << " samples" << std::endl;
+  std::cout << "MSAA: " << msaa_buffers << " buffers, " << msaa_samples << " samples" << "\n";
   
   return true;
 }
@@ -648,7 +630,7 @@ void cleanup_sdl_opengl()
       g_sdl_window = nullptr;
   }
   SDL_Quit();
-  std::cout << "SDL and OpenGL cleaned up successfully" << std::endl;
+  std::cout << "SDL and OpenGL cleaned up successfully" << "\n";
 }
 
 /**
@@ -686,7 +668,7 @@ int main(int argc, char **argv)
 
     // Initialize GLEW (if using Windows)
     // STUDENT TODO
-
+    
     float aliased_line_width_range[2];
     float point_size_range[2];
 
@@ -697,18 +679,19 @@ int main(int argc, char **argv)
               << aliased_line_width_range[1] << '\n';
     std::cout << "GL_POINT_SIZE_RANGE: " << point_size_range[0] << ", " << point_size_range[1]
               << '\n';
-
+/*
 #if defined(GL_POINT_SPRITE)
     // NOTE: Some windowing systems contain a bug that requires the following line of code to
     // execute BEFORE vertex shaders will populate 'gl_PointCoord'
+    std::cout << "buh?" << "\n";
     glEnable(GL_POINT_SPRITE);
 #endif
-   
+  */ 
     // Set initial viewport and projection matrix
     int initial_width, initial_height;
     SDL_GetWindowSize(g_sdl_window, &initial_width, &initial_height);
     reshape(initial_width, initial_height);
-    std::cout << "Initial reshape called with: " << initial_width << "x" << initial_height << std::endl;
+    std::cout << "Initial reshape called with: " << initial_width << "x" << initial_height << "\n";
     // Create the scene
     create_scene();
     cg::check_error("create_scene");

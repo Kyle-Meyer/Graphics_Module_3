@@ -21,17 +21,17 @@ bool LineShaderNode::create()
     // Use the line-specific shaders that support per-vertex colors
     if(!ShaderNode::create("Module3/line_vert.glsl", "Module3/line_frag.glsl"))
     {
-        std::cout << "LineShaderNode: Failed to create shader program from files" << std::endl;
+        std::cout << "LineShaderNode: Failed to create shader program from files" << "\n";
         return false;
     }
 
     // Check if shader program is valid
     GLuint program = shader_program_.get_program();
-    std::cout << "LineShaderNode: Shader program ID: " << program << std::endl;
+    std::cout << "LineShaderNode: Shader program ID: " << program << "\n";
     
     GLint link_status;
     glGetProgramiv(program, GL_LINK_STATUS, &link_status);
-    std::cout << "LineShaderNode: Shader link status: " << (link_status == GL_TRUE ? "SUCCESS" : "FAILED") << std::endl;
+    std::cout << "LineShaderNode: Shader link status: " << (link_status == GL_TRUE ? "SUCCESS" : "FAILED") << "\n";
     
     if (link_status != GL_TRUE) {
         GLint log_length;
@@ -39,18 +39,18 @@ bool LineShaderNode::create()
         if (log_length > 0) {
             std::vector<char> log(log_length);
             glGetProgramInfoLog(program, log_length, nullptr, log.data());
-            std::cout << "LineShaderNode: Shader link error: " << log.data() << std::endl;
+            std::cout << "LineShaderNode: Shader link error: " << log.data() << "\n";
         }
         return false;
     }
 
     if(!get_locations())
     {
-        std::cout << "LineShaderNode: Failed to get shader locations" << std::endl;
+        std::cout << "LineShaderNode: Failed to get shader locations" << "\n";
         return false;
     }
 
-    std::cout << "LineShaderNode: Created successfully!" << std::endl;
+    std::cout << "LineShaderNode: Created successfully!" << "\n";
     return true;
 }
 
@@ -60,7 +60,7 @@ bool LineShaderNode::get_locations()
 
     if(program == 0)
     {
-        std::cout << "LineShaderNode: get_locations failed - no shader program!" << std::endl;
+        std::cout << "LineShaderNode: get_locations failed - no shader program!" << "\n";
         return false;
     }
 
@@ -68,7 +68,7 @@ bool LineShaderNode::get_locations()
     GLint pos_loc = glGetAttribLocation(program, "position");
     if(pos_loc == -1)
     {
-        std::cout << "LineShaderNode: Could not find 'position' attribute" << std::endl;
+        std::cout << "LineShaderNode: Could not find 'position' attribute" << "\n";
         return false;
     }
 
@@ -76,7 +76,7 @@ bool LineShaderNode::get_locations()
     color_attr_loc_ = glGetAttribLocation(program, "color");
     if(color_attr_loc_ == -1)
     {
-        std::cout << "LineShaderNode: Could not find 'color' attribute" << std::endl;
+        std::cout << "LineShaderNode: Could not find 'color' attribute" << "\n";
         return false;
     }
 
@@ -84,14 +84,14 @@ bool LineShaderNode::get_locations()
     GLint ortho_loc = glGetUniformLocation(program, "ortho_matrix");
     if(ortho_loc == -1)
     {
-        std::cout << "LineShaderNode: Could not find 'ortho_matrix' uniform" << std::endl;
+        std::cout << "LineShaderNode: Could not find 'ortho_matrix' uniform" << "\n";
         return false;
     }
 
-    std::cout << "LineShaderNode: Found all shader locations:" << std::endl;
-    std::cout << "  position attribute: " << pos_loc << std::endl;
-    std::cout << "  color attribute: " << color_attr_loc_ << std::endl;
-    std::cout << "  ortho_matrix uniform: " << ortho_loc << std::endl;
+    std::cout << "LineShaderNode: Found all shader locations:" << "\n";
+    std::cout << "  position attribute: " << pos_loc << "\n";
+    std::cout << "  color attribute: " << color_attr_loc_ << "\n";
+    std::cout << "  ortho_matrix uniform: " << ortho_loc << "\n";
 
     return true;
 }

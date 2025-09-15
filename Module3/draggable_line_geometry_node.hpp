@@ -55,7 +55,25 @@ public:
      * @return Current end point
      */
     const Point2& get_end_point() const { return end_point_; }
-
+    
+    /**
+     * Reset the line to new start and end points
+     * @param start_point New start point
+     * @param end_point New end point
+     */
+    void reset_line(const Point2& start_point, const Point2& end_point);
+    
+    /**
+     * Set visibility of the line
+     * @param visible True to show, false to hide
+     */
+    void set_visible(bool visible) { visible_ = visible; }
+    
+    /**
+     * Check if line is visible
+     * @return True if visible
+     */
+    bool is_visible() const { return visible_; }
 private:
     // Line endpoints
     Point2 start_point_;
@@ -83,6 +101,7 @@ private:
     static constexpr float START_COLOR[4] = {0.8f, 0.1f, 0.1f, 1.0f}; // Red
     static constexpr float END_COLOR[4] = {0.1f, 0.8f, 0.1f, 1.0f};   // Green
     
+    bool visible_ = true; 
     /**
      * Initialize vertex data for the line
      */
